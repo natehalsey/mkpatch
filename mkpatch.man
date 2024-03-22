@@ -1,0 +1,43 @@
+.\" Manpage for mkpatch.
+.\" Contact halseyng@gmail.com to correct errors or typos.
+.TH mkpatch 1 "22 March 2024" "1.0" "mkpatch"
+.SH NAME
+mkpatch \- incremental patch creator.  
+.SH SYNOPSIS
+mkpatch [PATCHES_DIR] [UNPATCHED_PATH] [FULLY_PATCHED_PATH] [PATCH_NAME] [OPTIONS]
+.SH DESCRIPTION
+mkpatch is an incremental patch creator that allows you to create and maintain patches between local directories or branches. It's power comes from it's incremental patch list, which it can append to by generating further incremental patches, simply edit a single local patched directory and generate incremental patches against an unpatched local directory,  without needing to manage multiple patched directories, all while keeping an incremental patch list.
+
+
+.SH PATCH_DIR
+
+The PATCH_DIR acts as your incremental patchlist, and can be either an empty directory, or a directory containing *.diff and/or *.patch files. These files must start with a \fBnumber\fR indicating patch order.
+
+.SH UNPATCHED_PATH
+
+The UNPATCHED_PATH is a directory containing code with no changes.
+
+
+.SH FULLY_PATCHED_PATH
+
+The FULLY_PATCHED_PATH is a directory containing all changes made locally to the code.
+
+.SH EXAMPLES
+
+.B Example incrementally patching dwm and creating a new patch
+
+.ft CW 
+mkpatch ./patches ~/.config/dwm/unpatched/6.4 ~/.config/dwm/patched/6.4
+.ft
+
+
+.SH OPTIONS
+--help, print a help screen
+
+--keep-temp, keep the temporary folder (good for debugging)
+.SH SEE ALSO
+patch(1), git(5) 
+.SH BUGS
+No known bugs.
+.SH AUTHOR
+Nate Halsey (halseyng@gmail.com)

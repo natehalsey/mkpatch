@@ -1,0 +1,47 @@
+NAME
+       mkpatch - incremental patch creator.
+
+SYNOPSIS
+       mkpatch  [PATCHES_DIR]  [UNPATCHED_PATH] [FULLY_PATCHED_PATH] [PATCH_NAME]
+       [OPTIONS]
+
+DESCRIPTION
+       mkpatch is an incremental patch creator that  allows  you  to  create  and
+       maintain  patches  between local directories or branches. It’s power comes
+       from it’s incremental patch list, which it can  append  to  by  generating
+       further  incremental patches, simply edit a single local patched directory
+       and generate incremental patches against  an  unpatched  local  directory,
+       without  needing to manage multiple patched directories, all while keeping
+       an incremental patch list.
+
+PATCH_DIR
+       The PATCH_DIR acts as your incremental patchlist, and  can  be  either  an
+       empty  directory,  or  a directory containing *.diff and/or *.patch files.
+       These files must start with a number indicating patch order.
+
+UNPATCHED_PATH
+       The UNPATCHED_PATH is a directory containing code with no changes.
+
+FULLY_PATCHED_PATH
+       The FULLY_PATCHED_PATH is a directory containing all changes made  locally
+       to the code.
+
+EXAMPLES
+       Example incrementally patching dwm and creating a new patch
+
+       mkpatch ./patches ˜/.config/dwm/unpatched/6.4 ˜/.config/dwm/patched/6.4
+
+OPTIONS
+       --help, print a help screen
+
+       --keep-temp, keep the temporary folder (good for debugging)
+
+SEE ALSO
+       patch(1), git(5)
+
+BUGS
+       No known bugs.
+
+AUTHOR
+       Nate Halsey (halseyng@gmail.com)
+

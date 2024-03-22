@@ -1,0 +1,174 @@
+#!/bin/sh
+
+set -u
+
+print_help () {
+        echo "mkpatch: An incremental patch maker."
+        echo "mkpatch [PATCHES] [UNPATCH] [PATCHED] [PATCH_NAME] [OPTIONS]"
+	echo -e "Options:"
+	echo -e '\t' "--keep-temp" '\t' "keeps the temporary directory made when creating the patch"
+	echo -e '\t' "--help" '\t' "prints this help screen"
+
+}
+
+keep_temp_dir=0
+
+# check the last arg to see if it's an opt we support
+case "${*: -1:1}" in
+	--keep-temp)
+		keep_temp_dir=1	
+		;;
+	--help)
+		print_help
+		exit 0
+		;;
+	
+esac
+
+handle_not_enough_inputs() {
+	echo "Error: Too few inputs."
+	print_help
+	exit 1
+}
+
+handle_patch_not_numbered() {
+	echo "Error: Patch name must start with a number."
+	print_help
+	exit 1
+}
+
+create_temp_dir() {
+	local temp_dir
+	temp_dir="$PWD/mkpatch-tmp-$RANDOM"
+	mkdir $temp_dir
+
+	cp -r $unpatched_dir/. $temp_dir/a
+	cp -r $patched_dir/. $temp_dir/b
+	rm -rf $temp_dir/*/.git
+
+	echo $temp_dir
+}
+
+
+handle_exit(){
+	local exit_code=$1
+	local temp_dir=$2
+	local keep_temp_dir=$3
+	
+	if  [[ -n $temp_dir ]] && [[ $keep_temp_dir -eq 0 ]]; then
+		rm -rf $temp_dir
+	fi
+}
+
+patch_name_available() {
+	local patches=$1
+	local patch_name=$2
+
+	if [[ $patches =~ $patch_name ]]; then
+		echo "Patch name already exists ..."
+		echo 1
+	fi
+
+	echo 0
+}
+
+get_previous_patches() {
+	local patches_dir=$1
+
+	patches=( $(find $patches_dir -maxdepth 1 -type f -name "*.diff" -o -name "*.patch") )
+	
+	IFS=$'\n' patches=($(sort -n <<<"${patches[*]}"))
+	
+	echo $patches
+}
+
+apply_previous_patches() {
+	{ # try
+		local patches=$1
+		local temp_dir=$2
+		local keep_temp_dir=$3	
+
+		cd $temp_dir
+
+		for patch in $patches; do 
+			echo "Applying patch: $patch ..."	
+			patch -p1 -d a < $patch
+		done
+		echo "Patches applied ..."
+	} || {  # except
+		echo "Failed to apply patches ..."
+		handle_exit 1 "$temp_dir" "$keep_temp_dir"		
+	}
+}
+
+maybe_update_patch_name(){
+	local patch_name=$1
+	if ! [[ $patch_name == *".diff" || $patch_name == *".patch" ]]; then
+		echo "$patch_name.patch"
+	else
+		echo "$patch_name"
+	fi
+}
+
+create_patch(){
+	{ # try
+		local temp_dir
+		local patches_dir
+		local patch_name
+		local keep_temp_dir
+
+		temp_dir=$1
+		patches_dir=$2
+		patch_name=$3
+		keep_temp_dir=$4
+
+		echo "Creating patch .."
+
+		patch=$(git -C $temp_dir diff --no-prefix a b > $patches_dir/$patch_name)
+		if [[ -n $patch ]]; then
+			# I think the above command always returns false, so this checks that
+			echo $patch
+			return false
+		fi
+		echo "Patch created ..."
+	} || { # except *
+		echo "Failed to create patch ..."
+		handle_exit 1 "$temp_dir" "$keep_temp_dir"	
+	}
+}
+
+mkpatch () {
+	patches_dir=$1
+	unpatched_dir=$2
+	patched_dir=$3
+	patch_name=$4	
+
+	patches=$(get_previous_patches "$patches_dir")
+	
+	if ! [[ $(patch_name_available "${patches[@]}" "$patch_name" ) -eq 0 ]]; then
+		echo "Error: patch name $patch_name already taken, exiting to avoid destroying data .."
+		exit 1
+	fi
+
+	temp_dir=$(create_temp_dir)
+	
+	apply_previous_patches "${patches[@]}" "$temp_dir" "$keep_temp_dir"
+	
+	patch_name=$(maybe_update_patch_name "$patch_name")
+	
+	create_patch "$temp_dir" "$patches_dir" "$patch_name" "$keep_temp_dir"
+	
+	handle_exit 0 "$temp_dir" "$keep_temp_dir"
+}
+
+patch_name=$4	
+
+if [ "$#" -lt 4 ]; then
+	handle_not_enough_inputs		
+fi
+
+if ! [[ $patch_name =~ ^[0-9] ]]; then
+	handle_patch_not_numbered
+fi
+
+mkpatch "$1" "$2" "$3" "$4"
